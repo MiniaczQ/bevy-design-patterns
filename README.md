@@ -58,7 +58,7 @@ They don't need to be perfect, complete, or even very good when you submit them.
    1. A one-sentence description of what the BDP is about.
    1. A link to the "rendered" form of the `README.md` file. To do so, link directly to the file on your own branch, so then the link stays up to date as the file's contents changes. See #1 for an example of what this looks like.
 1. Add your proposal to the `CONTENT.md` document.
-1. Help us discuss and refine the BDP. Bevy users will leave comments and suggestions. Ideally at some point relative consensus will be reached. Your BDP is accepted if your pull request is merged. If your BDP is accepted, move on to step 8. A closed BDP indicates that the design cannot be accepted in its current form.
+1. Help us discuss and refine the BDP. Bevy users will leave comments and suggestions. Ideally at some point relative consensus will be reached. Your BDP is accepted if your pull request is merged. If your BDP is accepted, move on to step 7. A closed BDP indicates that the design cannot be accepted in its current form.
 1. Bevy users can now easily find and learn from your design pattern.
 
 ## Collaborating
