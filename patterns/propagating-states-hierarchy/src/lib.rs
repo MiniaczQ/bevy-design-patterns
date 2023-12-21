@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-pub struct LazyStatesHierarchyPlugin;
+pub struct PropagatingStatesHierarchyPlugin;
 
-impl Plugin for LazyStatesHierarchyPlugin {
+impl Plugin for PropagatingStatesHierarchyPlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<MajorState>();
         app.add_state::<MinorState>();
@@ -36,13 +36,13 @@ pub fn update_state<T: States>(state: T) -> impl Fn(ResMut<NextState<T>>) {
 mod tests {
     use bevy::prelude::*;
 
-    use crate::{update_state, LazyStatesHierarchyPlugin, MajorState, MinorState};
+    use crate::{update_state, PropagatingStatesHierarchyPlugin, MajorState, MinorState};
 
     #[test]
     fn default_state() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_plugins(LazyStatesHierarchyPlugin);
+        app.add_plugins(PropagatingStatesHierarchyPlugin);
 
         assert_eq!(*app.world.resource::<State<MajorState>>(), MajorState::A);
         assert_eq!(*app.world.resource::<State<MinorState>>(), MinorState::None);
@@ -52,7 +52,7 @@ mod tests {
     fn change_major_state_to_b() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_plugins(LazyStatesHierarchyPlugin);
+        app.add_plugins(PropagatingStatesHierarchyPlugin);
         app.add_systems(Update, update_state(MajorState::B).run_if(run_once()));
 
         for _ in 0..3 {
@@ -67,7 +67,7 @@ mod tests {
     fn change_major_state_to_b_then_a() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_plugins(LazyStatesHierarchyPlugin);
+        app.add_plugins(PropagatingStatesHierarchyPlugin);
         app.add_systems(Update, update_state(MajorState::B).run_if(run_once()));
         app.add_systems(OnEnter(MajorState::B), update_state(MajorState::A));
 

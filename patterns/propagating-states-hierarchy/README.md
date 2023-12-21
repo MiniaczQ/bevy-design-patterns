@@ -1,4 +1,4 @@
-# Pattern Name: Lazy States Hierarchy
+# Pattern Name: Propagating States Hierarchy
 
 ## Summary
 

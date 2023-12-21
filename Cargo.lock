@@ -2100,13 +2100,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lazy-states-hierarchy"
-version = "0.1.0"
-dependencies = [
- "bevy",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2720,6 +2713,13 @@ name = "profiling"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1de09527cd2ea2c2d59fb6c2f8c1ab8c71709ed9d1b6d60b0e1c9fbb6fdcb33c"
+
+[[package]]
+name = "propagating-states-hierarchy"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
 
 [[package]]
 name = "quote"

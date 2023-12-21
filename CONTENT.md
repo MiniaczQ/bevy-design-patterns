@@ -4,7 +4,7 @@ Topical list of patterns.
 
 ## Behavioral
 
-- [Lazy States Hierarchy](./patterns/lazy-states-hierarchy/README.md)
+- [Propagating States Hierarchy](./patterns/propagating-states-hierarchy/README.md)
 
 <!-- # Category name -->
 
