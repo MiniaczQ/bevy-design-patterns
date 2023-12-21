@@ -5,7 +5,7 @@ pub struct StateScopedEntitiesPlugin;
 impl Plugin for StateScopedEntitiesPlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<MyState>();
-        app.add_systems(Update, despawn_scoped::<MyState>);
+        app.add_systems(PreUpdate, despawn_scoped::<MyState>);
     }
 }
 
@@ -62,7 +62,7 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.add_plugins(StateScopedEntitiesPlugin);
         let id = app.world.spawn(Scoped(MyState::A)).id();
-        app.add_systems(Update, update_state(MyState::B).run_if(run_once()));
+        app.add_systems(Startup, update_state(MyState::B).run_if(run_once()));
 
         app.update();
         app.update();
