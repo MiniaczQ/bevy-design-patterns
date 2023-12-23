@@ -19,66 +19,38 @@ pub fn change_state<S: States>(state: S) -> impl Fn(ResMut<NextState<S>>) {
     }
 }
 
-pub fn apply_on_exit<S: States>(world: &mut World) {
-    let next_state_resource = world.resource::<NextState<SubState<S>>>();
-    let Some(entered) = next_state_resource.0.as_ref() else {
-        return;
-    };
-    let state_resource = world.resource::<State<SubState<S>>>();
-    if *state_resource == *entered {
-        return;
-    }
-    let exited = state_resource.get().clone();
-
-    // Only run exit schedules if we exit out of active state
-    let SubState::Active(exited) = exited else {
-        return;
-    };
-    world.try_run_schedule(OnExit(exited.clone())).ok();
-}
-
 pub fn apply_on_transition<S: States>(world: &mut World) {
-    let next_state_resource = world.resource::<NextState<SubState<S>>>();
-    let Some(entered) = next_state_resource.0.as_ref() else {
-        return;
-    };
-    let state_resource = world.resource::<State<SubState<S>>>();
-    if *state_resource == *entered {
-        return;
-    }
-
-    // Only run transition schedules if we transition between active states
-    let SubState::Active(exited) = state_resource.get() else {
-        return;
-    };
-    let SubState::Active(entered) = entered else {
-        return;
-    };
-    world
-        .try_run_schedule(OnTransition {
-            from: exited.clone(),
-            to: entered.clone(),
-        })
-        .ok();
-}
-
-pub fn apply_on_enter<S: States>(world: &mut World) {
     let mut next_state_resource = world.resource_mut::<NextState<SubState<S>>>();
     let Some(entered) = next_state_resource.bypass_change_detection().0.take() else {
         return;
     };
-    next_state_resource.set_changed();
-    let mut substate_resource = world.resource_mut::<State<SubState<S>>>();
-    if *substate_resource == entered {
+    let mut state_resource = world.resource_mut::<State<SubState<S>>>();
+    if *state_resource == entered {
         return;
-    };
-    *substate_resource = State::new(entered.clone());
+    }
+    // TODO: use `mem::replace` here
+    let exited = state_resource.get().clone();
+    *state_resource = State::new(entered.clone());
 
-    // Only run enter schedules if we enter into active state
-    let SubState::Active(entered) = entered else {
-        return;
-    };
-    world.try_run_schedule(OnEnter(entered)).ok();
+    match (exited, entered) {
+        (SubState::Active(exited), SubState::Inactive) => {
+            world.try_run_schedule(OnExit(exited)).ok();
+        }
+        (SubState::Active(exited), SubState::Active(entered)) => {
+            world.try_run_schedule(OnExit(exited.clone())).ok();
+            world
+                .try_run_schedule(OnTransition {
+                    from: exited,
+                    to: entered.clone(),
+                })
+                .ok();
+            world.try_run_schedule(OnEnter(entered)).ok();
+        }
+        (SubState::Inactive, SubState::Active(entered)) => {
+            world.try_run_schedule(OnEnter(entered)).ok();
+        }
+        (SubState::Inactive, SubState::Inactive) => {}
+    }
 }
 
 pub trait InitHierarchicalState {
@@ -96,10 +68,7 @@ impl InitHierarchicalState for App {
             (
                 // This sets the default state for root states
                 run_enter_schedule::<S>.run_if(run_once()),
-                // Those 3 can be merged together again, separated them during testing
-                apply_on_exit::<S>,
                 apply_on_transition::<S>,
-                apply_on_enter::<S>,
             )
                 .chain(),
         );
@@ -116,13 +85,7 @@ impl InitHierarchicalState for App {
         self.add_systems(OnExit(parent), change_state(SubState::<S>::Inactive));
         self.add_systems(
             StateTransition,
-            (
-                // Can be merged, look same case above
-                apply_on_exit::<S>.after(apply_on_enter::<P>),
-                apply_on_transition::<S>,
-                apply_on_enter::<S>,
-            )
-                .chain(),
+            (apply_on_transition::<S>.after(apply_on_transition::<P>),).chain(),
         );
     }
 }
