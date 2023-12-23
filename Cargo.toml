@@ -1,5 +1,3 @@
 [workspace]
 
-members = [
-    "template",
-]
+members = ["patterns/template"]
