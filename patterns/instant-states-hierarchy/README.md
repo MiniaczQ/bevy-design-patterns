@@ -32,6 +32,9 @@ Multiple exlusive systems one after another. But they're extremelly tiny and run
 
 API is filled with `SubState`, this can be polished during integration to Bevy.
 
+The hierarchy restraints are differential, so there is no mechanism to stop you from messing up the hierarchy yourself.
+But that wa alredy a problem with `State<T>`.
+
 ## Alternatives
 
 - Pattern matching for nested states: https://github.com/bevyengine/bevy/pull/10088
