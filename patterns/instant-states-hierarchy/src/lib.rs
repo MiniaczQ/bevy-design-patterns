@@ -79,8 +79,8 @@ pub trait AppSubstateExt {
     /// Adds a substate to the app for a given variant of parent state.
     /// A substate is only defined if the parent state is the correct variant.
     ///
-    /// A state can only be added ONCE as a substate.
-    /// Adding it multiple times will cause system ordering issues.
+    /// States create a tree, not a graph, hence can be added only once as a substate.
+    /// Adding it multiple times can cause system ordering issues.
     fn add_substate<P: States, S: States>(&mut self, parent: P);
 }
 

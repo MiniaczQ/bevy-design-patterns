@@ -6,23 +6,34 @@ This pattern adds instantly propagated hierarchical states with minor API change
 
 ## Problem
 
-Standard states API is good for multiple flat states, but it's difficult to use it with hierarchical states.
+Standard states API is good for multiple flat states, but it's dificult to use it with hierarchical states.
 There doesn't really exist a good support for them.
 
 ## Solution
 
-Add an `Option<T>`-like enum for substates which may or may not be 'valid' depending on the parent state.
-It's called `SubState` with variants `Active`, `Inactive`.
-Every state is wrapped in it by default.
+Add a `StateActivity<S>` middle-layer for state representation.
+This can either be `Inactive` or `Active(S)`.
 
-Root states are `Inactive` on startup, but get set during the first `StateTransition` schedule.
-Substates are set (or unset) during their parent's `OnEnter` and `OnExit` schedules.
-All transition schedules (`OnExit`, `OnTransition`, `OnEnter`) __do not run__ if any of their state is `Inactive`.
+This layer is only visible when playing with internals:
+- `State<S>` turned into `State<StateActivity<S>>`,
+- `NextState<StateActivity<S>>` new.
 
-To ensure instant propagation system scheduling is used.
+The surface API for states does not change:
+- `NextState<S>`,
+- `OnExit`,
+- `OnTransition`,
+- `OnEnter`.
 
-I separated the transition running systems during development, but we should get away with a single system for transition.
-That's because substates need to run their schedules AFTER parent's `OnEnter` (last transition), so their states update same tick.
+All states start as `Inactive`.
+Root states get set to `Active` during the first `StateTransition` schedule.
+This is a potential breaking change.
+Substates are set and unset during their parent's `OnEnter` and `OnExit` schedules.
+
+When turning `Active` both root states and substates will take a `NextState<S>` value if available and fallback to default.
+
+All transition schedules (`OnExit`, `OnTransition`, `OnEnter`) only run if all of their states are `Active`.
+
+System scheduling is used for instant propagation, substates are updated after their parents in the same tick.
 
 [Example](./src/lib.rs)
 
