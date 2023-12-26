@@ -28,12 +28,8 @@ That's because substates need to run their schedules AFTER parent's `OnEnter` (l
 
 ## Cons
 
-Multiple exlusive systems one after another. But they're extremelly tiny and run any logic rarely.
-
-API is filled with `SubState`, this can be polished during integration to Bevy.
-
-The hierarchy restraints are differential, so there is no mechanism to stop you from messing up the hierarchy yourself.
-But that wa alredy a problem with `State<T>`.
+Multiple exlusive systems one after another.
+But they're extremelly tiny and run any logic rarely.
 
 ## Alternatives
 

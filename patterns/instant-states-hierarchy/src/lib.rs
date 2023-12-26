@@ -1,42 +1,60 @@
 use bevy::prelude::*;
 
+/// State activity status.
+/// All states are stored in `StateActivity` starting as `Inactive`.
+/// Root states are set to `Active` during `Startup` schedule and never go `Inactive` again.
+/// Substates are set to `Active` and `Inactive` during their parent's respective `OnEnter` and `OnExit` schedules.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, States)]
-pub enum SubState<T: States> {
+pub enum StateActivity<T: States> {
     #[default]
     Inactive,
     Active(T),
 }
 
+/// Modified `run_enter_schedule`.
+/// Sets root states to active with their `NextState` or default value.
+/// This system is no longer responsible for running the `OnEnter` schedule.
 pub fn run_enter_schedule<S: States>(world: &mut World) {
-    let mut substate = world.resource_mut::<State<SubState<S>>>();
-    *substate = State::new(SubState::Active(S::default()));
-    world.try_run_schedule(OnEnter(S::default())).ok();
+    let next_state = world.resource_mut::<NextState<S>>().0.take();
+    let mut internal_next_state = world.resource_mut::<NextState<StateActivity<S>>>();
+    match next_state {
+        Some(state) => internal_next_state.set(StateActivity::Active(state)),
+        None => internal_next_state.set(StateActivity::Active(S::default())),
+    }
 }
 
+/// Helper function for changing state.
 pub fn change_state<S: States>(state: S) -> impl Fn(ResMut<NextState<S>>) {
     move |mut next_state: ResMut<NextState<S>>| {
         next_state.set(state.clone());
     }
 }
 
+/// Heavily modified `apply_on_transition` schedule.
+/// Only runs transition schedules if all involved states are active.
+/// - OnExit - if exited an active state
+/// - OnTransition - if exited and entered active states
+/// - OnEnter - if entered an active state
 pub fn apply_on_transition<S: States>(world: &mut World) {
-    let mut next_state_resource = world.resource_mut::<NextState<SubState<S>>>();
-    let Some(entered) = next_state_resource.bypass_change_detection().0.take() else {
+    let mut internal_next_state = world.resource_mut::<NextState<StateActivity<S>>>();
+    let Some(entered) = internal_next_state.bypass_change_detection().0.take() else {
         return;
     };
-    let mut state_resource = world.resource_mut::<State<SubState<S>>>();
-    if *state_resource == entered {
+
+    let mut state = world.resource_mut::<State<StateActivity<S>>>();
+    if *state == entered {
         return;
     }
-    // TODO: use `mem::replace` here
-    let exited = state_resource.get().clone();
-    *state_resource = State::new(entered.clone());
+
+    // TODO: use `mem::replace` when integrating with Bevy cause private fields
+    let exited = state.get().clone();
+    *state = State::new(entered.clone());
 
     match (exited, entered) {
-        (SubState::Active(exited), SubState::Inactive) => {
+        (StateActivity::Active(exited), StateActivity::Inactive) => {
             world.try_run_schedule(OnExit(exited)).ok();
         }
-        (SubState::Active(exited), SubState::Active(entered)) => {
+        (StateActivity::Active(exited), StateActivity::Active(entered)) => {
             world.try_run_schedule(OnExit(exited.clone())).ok();
             world
                 .try_run_schedule(OnTransition {
@@ -46,43 +64,42 @@ pub fn apply_on_transition<S: States>(world: &mut World) {
                 .ok();
             world.try_run_schedule(OnEnter(entered)).ok();
         }
-        (SubState::Inactive, SubState::Active(entered)) => {
+        (StateActivity::Inactive, StateActivity::Active(entered)) => {
             world.try_run_schedule(OnEnter(entered)).ok();
         }
-        (SubState::Inactive, SubState::Inactive) => {}
+        (StateActivity::Inactive, StateActivity::Inactive) => {}
     }
 }
 
-pub trait InitHierarchicalState {
+pub trait AppSubstateExt {
+    /// Adds a root state to the app.
+    /// A root state is always defined.
     fn add_root_state<S: States>(&mut self);
-    fn add_substate<S: States, P: States>(&mut self, parent: P);
+
+    /// Adds a substate to the app for a given variant of parent state.
+    /// A substate is only defined if the parent state is the correct variant.
+    ///
+    /// A state can only be added ONCE as a substate.
+    /// Adding it multiple times will cause system ordering issues.
+    fn add_substate<P: States, S: States>(&mut self, parent: P);
 }
 
-impl InitHierarchicalState for App {
+impl AppSubstateExt for App {
     fn add_root_state<S: States>(&mut self) {
-        // Root states start as inactive
-        self.insert_resource(State::new(SubState::<S>::Inactive));
-        self.init_resource::<NextState<SubState<S>>>();
+        add_common_resources::<S>(self);
         self.add_systems(
             StateTransition,
             (
-                // This sets the default state for root states
                 run_enter_schedule::<S>.run_if(run_once()),
                 apply_on_transition::<S>,
             )
                 .chain(),
         );
     }
-
-    fn add_substate<S: States, P: States>(&mut self, parent: P) {
-        // Substates are set by parents during their OnEnter schedule
-        self.init_resource::<State<SubState<S>>>();
-        self.init_resource::<NextState<SubState<S>>>();
-        self.add_systems(
-            OnEnter(parent.clone()),
-            change_state(SubState::Active(S::default())),
-        );
-        self.add_systems(OnExit(parent), change_state(SubState::<S>::Inactive));
+    fn add_substate<P: States, S: States>(&mut self, parent: P) {
+        add_common_resources::<S>(self);
+        self.add_systems(OnEnter(parent.clone()), set_active_next_or_default::<S>);
+        self.add_systems(OnExit(parent), set_inactive::<S>);
         self.add_systems(
             StateTransition,
             (apply_on_transition::<S>.after(apply_on_transition::<P>),).chain(),
@@ -90,64 +107,104 @@ impl InitHierarchicalState for App {
     }
 }
 
+/// Adds common resources for root states and substates.
+fn add_common_resources<S: States>(app: &mut App) {
+    // The state itself.
+    app.init_resource::<State<StateActivity<S>>>();
+    // Internal `NextState`, contains information about activity.
+    // Could possibly introduce a different struct.
+    app.init_resource::<NextState<StateActivity<S>>>();
+    // User-facing `NextState`, only used when selected state is `Active`.
+    app.init_resource::<NextState<S>>();
+}
+
+/// Helper function for changing state.
+pub fn set_active_next_or_default<S: States>(
+    mut next_state: ResMut<NextState<S>>,
+    mut internal_next_state: ResMut<NextState<StateActivity<S>>>,
+) {
+    let state = next_state.0.take().unwrap_or_default();
+    internal_next_state.set(StateActivity::Active(state));
+}
+
+/// Helper function for changing state.
+pub fn set_inactive<S: States>(mut internal_next_state: ResMut<NextState<StateActivity<S>>>) {
+    internal_next_state.set(StateActivity::Inactive);
+}
+
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
 
     #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, States)]
-    pub enum MajorState {
+    pub enum AppState {
         #[default]
-        Major1,
-        Major2,
+        MainMenu,
+        Gameplay,
     }
 
     #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, States)]
-    pub enum MinorState {
+    pub enum GameplayState {
         #[default]
-        Minor1,
+        Playing,
+        Paused,
     }
 
-    use crate::{change_state, InitHierarchicalState, SubState};
+    use crate::{AppSubstateExt, StateActivity};
 
-    #[test]
-    fn major_1_minor_1() {
+    fn setup() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_root_state::<MajorState>();
-        app.add_substate::<MinorState, MajorState>(MajorState::Major1);
+        app.add_root_state::<AppState>();
+        app.add_substate::<AppState, GameplayState>(AppState::Gameplay);
+        app
+    }
 
-        app.update();
-
+    fn assert_active<S: States>(app: &App, state: S) {
         assert_eq!(
-            *app.world.resource::<State<SubState<MajorState>>>().get(),
-            SubState::Active(MajorState::Major1)
-        );
-        assert_eq!(
-            *app.world.resource::<State<SubState<MinorState>>>().get(),
-            SubState::Active(MinorState::Minor1)
+            *app.world.resource::<State<StateActivity<S>>>().get(),
+            StateActivity::Active(state)
         );
     }
 
-    #[test]
-    fn major_2_minor_inactive() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_root_state::<MajorState>();
-        app.add_substate::<MinorState, MajorState>(MajorState::Major1);
-        app.add_systems(
-            Startup,
-            change_state(SubState::Active(MajorState::Major2)).run_if(run_once()),
+    fn assert_inactive<S: States>(app: &App) {
+        assert_eq!(
+            *app.world.resource::<State<StateActivity<S>>>().get(),
+            StateActivity::Inactive
         );
+    }
+
+    #[test]
+    fn mainmenu() {
+        let mut app = setup();
+        app.insert_resource(NextState(Some(AppState::MainMenu)));
 
         app.update();
 
-        assert_eq!(
-            *app.world.resource::<State<SubState<MajorState>>>().get(),
-            SubState::Active(MajorState::Major2)
-        );
-        assert_eq!(
-            *app.world.resource::<State<SubState<MinorState>>>().get(),
-            SubState::Inactive
-        );
+        assert_active(&app, AppState::MainMenu);
+        assert_inactive::<GameplayState>(&app);
+    }
+
+    #[test]
+    fn playing() {
+        let mut app = setup();
+        app.insert_resource(NextState(Some(AppState::Gameplay)));
+
+        app.update();
+
+        assert_active(&app, AppState::Gameplay);
+        assert_active(&app, GameplayState::Playing);
+    }
+
+    #[test]
+    fn paused() {
+        let mut app = setup();
+        app.insert_resource(NextState(Some(AppState::Gameplay)));
+        app.insert_resource(NextState(Some(GameplayState::Paused)));
+
+        app.update();
+
+        assert_active(&app, AppState::Gameplay);
+        assert_active(&app, GameplayState::Paused);
     }
 }
