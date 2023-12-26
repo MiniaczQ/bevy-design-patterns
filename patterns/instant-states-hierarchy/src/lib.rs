@@ -1,14 +1,23 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::RunSystemOnce, prelude::*};
 
 /// State activity status.
 /// All states are stored in `StateActivity` starting as `Inactive`.
 /// Root states are set to `Active` during `Startup` schedule and never go `Inactive` again.
 /// Substates are set to `Active` and `Inactive` during their parent's respective `OnEnter` and `OnExit` schedules.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, States)]
-pub enum StateActivity<T: States> {
+pub enum StateActivity<S: States> {
     #[default]
     Inactive,
-    Active(T),
+    Active(S),
+}
+
+impl<S: States> StateActivity<S> {
+    pub fn is_active(&self) -> bool {
+        match self {
+            StateActivity::Inactive => false,
+            StateActivity::Active(_) => true,
+        }
+    }
 }
 
 /// Modified `run_enter_schedule`.
@@ -30,25 +39,43 @@ pub fn change_state<S: States>(state: S) -> impl Fn(ResMut<NextState<S>>) {
     }
 }
 
+pub fn propagate_states<S: States>(
+    mut internal_next_state: ResMut<NextState<StateActivity<S>>>,
+    mut next_state: ResMut<NextState<S>>,
+    mut state: ResMut<State<StateActivity<S>>>,
+) -> Option<(StateActivity<S>, StateActivity<S>)> {
+    let mut internal_next_state = internal_next_state.bypass_change_detection().0.take();
+
+    if state.is_active() || internal_next_state.clone().is_some_and(|x| x.is_active()) {
+        if let Some(next_state) = next_state.0.take() {
+            internal_next_state.replace(StateActivity::Active(next_state));
+        }
+    }
+
+    let Some(entered) = internal_next_state else {
+        return None;
+    };
+
+    if *state == entered {
+        return None;
+    }
+
+    // TODO: use `mem::replace` when integrating with Bevy cause private fields
+    let exited = state.get().clone();
+    *state = State::new(entered.clone());
+
+    Some((exited, entered))
+}
+
 /// Heavily modified `apply_on_transition`.
 /// Only runs transition schedules if all involved states are active.
 /// - OnExit - if exited an active state
 /// - OnTransition - if exited and entered active states
 /// - OnEnter - if entered an active state
 pub fn apply_on_transition<S: States>(world: &mut World) {
-    let mut internal_next_state = world.resource_mut::<NextState<StateActivity<S>>>();
-    let Some(entered) = internal_next_state.bypass_change_detection().0.take() else {
+    let Some((exited, entered)) = world.run_system_once(propagate_states::<S>) else {
         return;
     };
-
-    let mut state = world.resource_mut::<State<StateActivity<S>>>();
-    if *state == entered {
-        return;
-    }
-
-    // TODO: use `mem::replace` when integrating with Bevy cause private fields
-    let exited = state.get().clone();
-    *state = State::new(entered.clone());
 
     match (exited, entered) {
         (StateActivity::Active(exited), StateActivity::Inactive) => {
@@ -102,7 +129,7 @@ impl AppSubstateExt for App {
         self.add_systems(OnExit(parent), set_inactive::<S>);
         self.add_systems(
             StateTransition,
-            (apply_on_transition::<S>.after(apply_on_transition::<P>),).chain(),
+            apply_on_transition::<S>.after(apply_on_transition::<P>),
         );
     }
 }
@@ -128,7 +155,11 @@ pub fn set_active_next_or_default<S: States>(
 }
 
 /// Helper function for changing state.
-pub fn set_inactive<S: States>(mut internal_next_state: ResMut<NextState<StateActivity<S>>>) {
+pub fn set_inactive<S: States>(
+    mut next_state: ResMut<NextState<S>>,
+    mut internal_next_state: ResMut<NextState<StateActivity<S>>>,
+) {
+    next_state.0.take();
     internal_next_state.set(StateActivity::Inactive);
 }
 
@@ -204,6 +235,54 @@ mod tests {
 
         assert_active(&app, AppState::Gameplay);
         assert_active(&app, GameplayState::Paused);
+    }
+
+    #[test]
+    fn mainmenu_to_playing() {
+        let mut app = setup();
+        app.update();
+
+        assert_active(&app, AppState::MainMenu);
+        assert_inactive::<GameplayState>(&app);
+
+        app.insert_resource(NextState(Some(AppState::Gameplay)));
+        app.update();
+
+        assert_active(&app, AppState::Gameplay);
+        assert_active(&app, GameplayState::Playing);
+    }
+
+    #[test]
+    fn mainmenu_to_paused() {
+        let mut app = setup();
+        app.update();
+
+        assert_active(&app, AppState::MainMenu);
+        assert_inactive::<GameplayState>(&app);
+
+        app.insert_resource(NextState(Some(AppState::Gameplay)));
+        app.insert_resource(NextState(Some(GameplayState::Paused)));
+        app.update();
+
+        assert_active(&app, AppState::Gameplay);
+        assert_active(&app, GameplayState::Paused);
+    }
+
+    #[test]
+    fn paused_to_mainmenu() {
+        let mut app = setup();
+        app.insert_resource(NextState(Some(AppState::Gameplay)));
+        app.insert_resource(NextState(Some(GameplayState::Paused)));
+        app.update();
+
+        assert_active(&app, AppState::Gameplay);
+        assert_active(&app, GameplayState::Paused);
+
+        app.insert_resource(NextState(Some(AppState::MainMenu)));
+        app.update();
+
+        assert_active(&app, AppState::MainMenu);
+        assert_inactive::<GameplayState>(&app);
     }
 
     fn assert_active<S: States>(app: &App, state: S) {
