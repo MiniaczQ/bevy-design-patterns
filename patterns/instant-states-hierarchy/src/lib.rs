@@ -30,7 +30,7 @@ pub fn change_state<S: States>(state: S) -> impl Fn(ResMut<NextState<S>>) {
     }
 }
 
-/// Heavily modified `apply_on_transition` schedule.
+/// Heavily modified `apply_on_transition`.
 /// Only runs transition schedules if all involved states are active.
 /// - OnExit - if exited an active state
 /// - OnTransition - if exited and entered active states
