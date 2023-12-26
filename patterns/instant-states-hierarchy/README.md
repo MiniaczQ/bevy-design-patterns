@@ -39,8 +39,13 @@ System scheduling is used for instant propagation, substates are updated after t
 
 ## Cons
 
+Breaking changes for `State<S>`.
+
 Multiple exlusive systems one after another.
 But they're extremelly tiny and run any logic rarely.
+
+A state `S` can only be used once in hierarchy.
+Using it multiple times can cause system ordering issues.
 
 ## Alternatives
 
