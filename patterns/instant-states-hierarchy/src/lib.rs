@@ -177,7 +177,7 @@ mod tests {
     #[test]
     fn mainmenu() {
         let mut app = setup();
-        app.insert_resource(NextState(Some(AppState::MainMenu)));
+        // No initialization, `MainMenu` is default for `AppState`.
 
         app.update();
 
@@ -188,6 +188,7 @@ mod tests {
     #[test]
     fn playing() {
         let mut app = setup();
+        // Initialize `AppState` with `MainMenu`, `Playing` is `GameplayState` default.
         app.insert_resource(NextState(Some(AppState::Gameplay)));
 
         app.update();
@@ -199,6 +200,7 @@ mod tests {
     #[test]
     fn paused() {
         let mut app = setup();
+        // Initialize `AppState` with `MainMenu` and `GameplayState` with `Paused`.
         app.insert_resource(NextState(Some(AppState::Gameplay)));
         app.insert_resource(NextState(Some(GameplayState::Paused)));
 
