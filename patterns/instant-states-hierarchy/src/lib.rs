@@ -136,6 +136,8 @@ pub fn set_inactive<S: States>(mut internal_next_state: ResMut<NextState<StateAc
 mod tests {
     use bevy::prelude::*;
 
+    use crate::{AppSubstateExt, StateActivity};
+
     #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, States)]
     pub enum AppState {
         #[default]
@@ -150,28 +152,12 @@ mod tests {
         Paused,
     }
 
-    use crate::{AppSubstateExt, StateActivity};
-
     fn setup() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.add_root_state::<AppState>();
         app.add_substate::<AppState, GameplayState>(AppState::Gameplay);
         app
-    }
-
-    fn assert_active<S: States>(app: &App, state: S) {
-        assert_eq!(
-            *app.world.resource::<State<StateActivity<S>>>().get(),
-            StateActivity::Active(state)
-        );
-    }
-
-    fn assert_inactive<S: States>(app: &App) {
-        assert_eq!(
-            *app.world.resource::<State<StateActivity<S>>>().get(),
-            StateActivity::Inactive
-        );
     }
 
     #[test]
@@ -218,5 +204,19 @@ mod tests {
 
         assert_active(&app, AppState::Gameplay);
         assert_active(&app, GameplayState::Paused);
+    }
+
+    fn assert_active<S: States>(app: &App, state: S) {
+        assert_eq!(
+            *app.world.resource::<State<StateActivity<S>>>().get(),
+            StateActivity::Active(state)
+        );
+    }
+
+    fn assert_inactive<S: States>(app: &App) {
+        assert_eq!(
+            *app.world.resource::<State<StateActivity<S>>>().get(),
+            StateActivity::Inactive
+        );
     }
 }
