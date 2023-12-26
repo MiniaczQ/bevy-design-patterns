@@ -35,7 +35,7 @@ All transition schedules (`OnExit`, `OnTransition`, `OnEnter`) only run if all o
 
 System scheduling is used for instant propagation, substates are updated after their parents in the same tick.
 
-[Example](./src/lib.rs)
+[Example](./src/lib.rs) (check tests for use cases)
 
 ## Cons
 
