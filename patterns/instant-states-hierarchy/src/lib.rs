@@ -175,6 +175,16 @@ mod tests {
     }
 
     #[test]
+    fn inactive() {
+        let app = setup();
+
+        // No update
+
+        assert_inactive::<AppState>(&app);
+        assert_inactive::<GameplayState>(&app);
+    }
+
+    #[test]
     fn mainmenu() {
         let mut app = setup();
         // No initialization, `MainMenu` is default for `AppState`.
