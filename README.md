@@ -1,4 +1,4 @@
-> Note:
+> [!NOTE]
 > This is a proposal for organized storage of Bevy patterns.
 > The idea may not be accepted by the community and the formats can change.
 > During this phase, no patterns will be merged and will only exist in PRs, so please check them for actual content!

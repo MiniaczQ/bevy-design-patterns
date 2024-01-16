@@ -6,6 +6,10 @@ Topical list of patterns.
 
 - [Propagating States Hierarchy](./patterns/propagating-states-hierarchy/README.md)
 
+## Creational
+
+- [Entity Installer](./patterns/entity-installer/README.md)
+
 <!-- # Category name -->
 
 <!-- * [Pattern name](pattern README path) -->
