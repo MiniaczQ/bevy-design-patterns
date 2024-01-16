@@ -1,3 +1,3 @@
 [workspace]
 
-members = ["template", "patterns/state-scoped-entities"]
+members = ["template", "patterns/entity-installer", "patterns/instant-states-hierarchy", "patterns/propagating-states-hierarchy", "patterns/state-scoped-entities"]

@@ -40,6 +40,10 @@
 
 <!-- Patterns that use similar API. -->
 
+## Credit
+
+<!-- Where credit is due. If you're basing your pattern on someone else's code or idea, mention them here. -->
+
 ## Tags
 
 <!-- List of keywords related to this pattern. -->
