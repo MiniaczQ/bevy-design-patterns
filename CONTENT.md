@@ -1,16 +1,7 @@
 # Design Patterns
 
-Topical list of patterns.
+- [Component Installer](./patterns/component_installer/README.md) - Add additional components to a marked entity.
+- [Deferred Spawn](./patterns/deferred_spawn/README.md) - Offload entity spawning to dedicated logic.
+- [Dependency Hook](./patterns/dependency_hook/README.md) - Add a component based on other components present in the entity.
 
-## Behavioral
-
-- [State-scoped Entities](./patterns/state-scoped-entities/README.md)
-- [Propagating States Hierarchy](./patterns/propagating-states-hierarchy/README.md)
-
-## Creational
-
-- [Entity Installer](./patterns/entity-installer/README.md)
-
-<!-- # Category name -->
-
-<!-- * [Pattern name](pattern README path) -->
+<!-- * [Pattern name](pattern README path) - Short description -->

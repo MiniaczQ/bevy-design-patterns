@@ -1,5 +1,5 @@
 [package]
-name = "template"
+name = "deferred_spawn"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,11 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.14"
+
+[[bin]]
+name = "deferred_spawn_simple"
+path = "src/simple.rs"
+
+[[bin]]
+name = "deferred_spawn_complex"
+path = "src/complex.rs"

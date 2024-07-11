@@ -1,8 +1,11 @@
-# Pattern Name: <!-- Pattern name here. -->
+# Pattern Name: Dependency Hook
 
 ## Description
 
-<!-- Explanation of the pattern. -->
+Add a component based on other components present in the entity.
+
+This allows for dependency chains between components.
+One major drawback is that the component needs to have a default value.
 
 ## Implementation
 
@@ -10,7 +13,7 @@
 
 ## Use cases
 
-<!-- Where can you apply it? -->
+- 
 
 ## Alternatives
 

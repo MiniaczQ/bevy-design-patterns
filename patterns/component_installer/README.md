@@ -1,8 +1,8 @@
-# Pattern Name: <!-- Pattern name here. -->
+# Pattern Name: Installer
 
 ## Description
 
-<!-- Explanation of the pattern. -->
+Add additional components to a marked entity.
 
 ## Implementation
 
@@ -10,11 +10,11 @@
 
 ## Use cases
 
-<!-- Where can you apply it? -->
+- 
 
 ## Alternatives
 
-<!-- Coparison with other patterns and solutions. -->
+- [Deferred Spawn]()
 
 ## Credit
 

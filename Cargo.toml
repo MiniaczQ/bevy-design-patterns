@@ -1,3 +1,8 @@
 [workspace]
 
-members = ["template", "patterns/entity-installer", "patterns/instant-states-hierarchy", "patterns/propagating-states-hierarchy", "patterns/state-scoped-entities"]
+members = [
+    "template",
+    "patterns/component_installer",
+    "patterns/deferred_spawn",
+    "patterns/dependency_hook",
+]
