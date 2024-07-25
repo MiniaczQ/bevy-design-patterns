@@ -5,4 +5,5 @@ members = [
     "patterns/component_installer",
     "patterns/deferred_spawn",
     "patterns/dependency_hook",
+    "patterns/event_bridge",
 ]
