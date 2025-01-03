@@ -1,3 +1,14 @@
+> [!Important]
+> Due to rapid development of Bevy, which often invalidates existing patterns
+> as well as difficulty of coming up with new ones,
+> this repository will be deactivated until appropriate.
+> (Feel free to contact me and take over, if you think it's the right time)
+>
+> If you're looking for up-to-date information, please visit the following:
+> - [Bevy Best Practices](https://github.com/tbillington/bevy_best_practices)
+> - [Bevy Template 2D](https://github.com/TheBevyFlock/bevy_new_2d)
+
+
 > [!NOTE]
 > This is a proposal for organized storage of Bevy patterns.
 > The idea may not be accepted by the community and the formats can change.
